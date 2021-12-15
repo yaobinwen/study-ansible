@@ -4,6 +4,10 @@
 
 This document has my study notes of Ansible and also serves as a quick guide for me to recall how to use Ansible for various purposes. The original README is [here](./README.rst).
 
+In order to help understand the code, I added comments or debugging log messages which all have the tag `[ywen]`.
+
+I created a branch `ywen/v2.9.12` to study the code of the version `2.9.12`. As of 2021-12-14, I haven't studied the code of any other versions.
+
 ## 2. Develop and Debug Ansible
 
 The latest version (i.e., the `devel` version) of the developer guide is here: [Developer Guide](https://docs.ansible.com/ansible/devel/dev_guide/index.html). Note that Ansible may re-organize their documentation site so the links may become inaccessible. Should this happen, search the key word "Ansible Developer Guide".
@@ -62,3 +66,39 @@ The [Ansible document "Special Variables"](https://docs.ansible.com/ansible/late
 - `inventory_hostname`:
   - The inventory name for the ‘current’ host being iterated over in the play.
   - [`inventory_hostname.json`](./examples/inventory_hostname.json)
+
+## 4. Modules and Files
+
+This section is based on the version `2.9.12`. Check out the branch `ywen/v2.9.12`.
+
+The `bin/ansible` is a symbolic link pointing at `lib/ansible/cli/scripts/ansible_cli_stub.py` which is the entry point of all the CLI execution. For example, running `ansible-playbook` will eventually run into the main module of `ansible_cli_stub.py`.
+
+`lib/ansible/cli` has multiple modules:
+- `adhoc.py`: For arbitrary Ansible module execution (e.g., `ansible -m`).
+- `config.py`: For the CLI `ansible-config`.
+- `console.py`: For the CLI `ansible-console`.
+- `doc.py`: For the CLI `ansible-doc`.
+- `galaxy.py`: For the CLI `ansible-galaxy`.
+- `inventory.py`: For the CLI `ansible-inventory`.
+- `playbook.py`: For the CLI `ansible-playbook`.
+- `pull.py`: For the CLI `ansible-pull`.
+- `vault.py`: For the CLI `ansible-vault`.
+
+The class `PlaybookCLI` (`lib/ansible/cli/playbook.py`) is the CLI for running `ansible-playbook`. Look at its `run` method which uses the class `PlaybookExecutor` (`lib/ansible/executor/playbook_executor.py`) to run the playbook. Look at its `run` method.
+
+`PlaybookExecutor` uses a `TaskQueueManager` (`lib/ansible/executor/task_queue_manager.py`) to run the tasks. Look at its `run` method.
+
+Note that `TaskQueueManager` actually uses the _strategy_ to run the tasks:
+
+```python
+        # load the specified strategy (or the default linear one)
+        strategy = strategy_loader.get(new_play.strategy, self)
+        if strategy is None:
+            raise AnsibleError("Invalid play strategy specified: %s" % new_play.strategy, obj=play._ds)
+
+        # ...
+
+        # and run the play using the strategy and cleanup on way out
+        display.debug("[ywen] Run the play using the strategy {s}".format(s=strategy))
+        play_return = strategy.run(iterator, play_context)
+```
