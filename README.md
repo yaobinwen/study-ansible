@@ -43,6 +43,35 @@ After the initial setup above, every time you are ready to start developing Ansi
 
 Use the module `lib/ansible/utils/display.py`. Search the code `from ansible.utils.display import Display` or something similar to find the examples in the codebase.
 
+### 2.3 Debug Output vs `debug` Module Output
+
+The "debug output" can refer to two things in Ansible, so be specific when talking about "debug output".
+
+The first one is the log messages that are printed out by [`Display.debug()` method](lib/ansible/utils/display.py):
+
+```python
+class Display(metaclass=Singleton):
+
+    # ...
+
+    def debug(self, msg, host=None):
+        if C.DEFAULT_DEBUG:
+            if host is None:
+                self.display("%6d %0.5f: %s" % (os.getpid(), time.time(), msg), color=C.COLOR_DEBUG)
+            else:
+                self.display("%6d %0.5f [%s]: %s" % (os.getpid(), time.time(), host, msg), color=C.COLOR_DEBUG)
+```
+
+These debugging log messages can be toggled by the [environment variable `ANSIBLE_DEBUG`](https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_DEBUG) and the color can be configured by [`ANSIBLE_COLOR_DEBUG`](https://docs.ansible.com/ansible/latest/reference_appendices/config.html#envvar-ANSIBLE_COLOR_DEBUG). For example:
+
+```
+ywen@ywen-Precision-7510:~$ export ANSIBLE_COLOR_DEBUG="bright yellow"
+ywen@ywen-Precision-7510:~$ export ANSIBLE_DEBUG=1
+ywen@ywen-Precision-7510:~$ ansible -m ping localhost
+```
+
+The second one is the output of the [`ansible.builtin.debug` module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/debug_module.html).
+
 ## 3. Sample Outputs
 
 `ansible_facts` has [facts about the remote system](https://docs.ansible.com/ansible/latest/user_guide/playbooks_vars_facts.html#ansible-facts):
