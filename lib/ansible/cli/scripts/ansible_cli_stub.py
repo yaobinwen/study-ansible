@@ -79,6 +79,7 @@ if __name__ == '__main__':
             # sometimes add that
             target = target[:-1]
 
+        # NOTE(ywen): This block figures out which sub-cli to run.
         if len(target) > 1:
             sub = target[1]
             myclass = "%sCLI" % sub.capitalize()
@@ -88,8 +89,10 @@ if __name__ == '__main__':
         else:
             raise AnsibleError("Unknown Ansible alias: %s" % me)
 
+        # NOTE(ywen): Get the actual CLI module.
         try:
             mycli = getattr(__import__("ansible.cli.%s" % sub, fromlist=[myclass]), myclass)
+            display.debug("[ywen] The used CLI module is: {m}".format(m=repr(mycli)))
         except ImportError as e:
             # ImportError members have changed in py3
             if 'msg' in dir(e):
@@ -101,8 +104,11 @@ if __name__ == '__main__':
             else:
                 raise
 
+        # NOTE(ywen): Create the working directory that will put the temporary
+        # bundled modules.
         b_ansible_dir = os.path.expanduser(os.path.expandvars(b"~/.ansible"))
         try:
+            display.debug("[ywen] Creating the working directory at '{p}'".format(p=b_ansible_dir))
             os.mkdir(b_ansible_dir, 0o700)
         except OSError as exc:
             if exc.errno != errno.EEXIST:
@@ -113,13 +119,17 @@ if __name__ == '__main__':
             display.debug("Created the '%s' directory" % to_text(b_ansible_dir, errors='surrogate_or_replace'))
 
         try:
+            # NOTE(ywen): `args` is all the arguments that are given to the CLI.
             args = [to_text(a, errors='surrogate_or_strict') for a in sys.argv]
+            display.debug("[ywen] args: {args}".format(args=args))
         except UnicodeError:
             display.error('Command line args are not in utf-8, unable to continue.  Ansible currently only understands utf-8')
             display.display(u"The full traceback was:\n\n%s" % to_text(traceback.format_exc()))
             exit_code = 6
         else:
+            # NOTE(ywen): Instantiate a CLI instance using `args`.
             cli = mycli(args)
+            # NOTE(ywen): Run the CLI and get the exit code.
             exit_code = cli.run()
 
     except AnsibleOptionsError as e:

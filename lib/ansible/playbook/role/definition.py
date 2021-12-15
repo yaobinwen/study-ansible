@@ -92,6 +92,7 @@ class RoleDefinition(Base, Conditional, Taggable, CollectionSearch):
         # result in a new role name, if it was a file path)
         role_name = self._load_role_name(ds)
         (role_name, role_path) = self._load_role_path(role_name)
+        display.v("[ywen] Found role '{n}' at '{p}'".format(n=role_name, p=role_path))
 
         # next, we split the role params out from the valid role
         # attributes and update the new datastructure with that

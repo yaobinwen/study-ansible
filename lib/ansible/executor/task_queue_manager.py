@@ -241,6 +241,7 @@ class TaskQueueManager:
             self._start_at_done = True
 
         # and run the play using the strategy and cleanup on way out
+        display.debug("[ywen] Run the play using the strategy {s}".format(s=strategy))
         play_return = strategy.run(iterator, play_context)
 
         # now re-save the hosts that failed from the iterator to our internal list
