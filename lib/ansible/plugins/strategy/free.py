@@ -34,7 +34,7 @@ DOCUMENTATION = '''
 import time
 
 from ansible import constants as C
-from ansible.errors import AnsibleError
+from ansible.errors import AnsibleError, AnsibleParserError
 from ansible.playbook.included_file import IncludedFile
 from ansible.plugins.loader import action_loader
 from ansible.plugins.strategy import StrategyBase
@@ -120,17 +120,19 @@ class StrategyModule(StrategyBase):
                 (state, task) = iterator.get_next_task_for_host(host, peek=True)
                 display.debug("free host state: %s" % state, host=host_name)
                 display.debug("free host task: %s" % task, host=host_name)
-                if host_name not in self._tqm._unreachable_hosts and task:
 
+                # check if there is work to do, either there is a task or the host is still blocked which could
+                # mean that it is processing an include task and after its result is processed there might be
+                # more tasks to run
+                if (task or self._blocked_hosts.get(host_name, False)) and not self._tqm._unreachable_hosts.get(host_name, False):
+                    display.debug("this host has work to do", host=host_name)
                     # set the flag so the outer loop knows we've still found
                     # some work which needs to be done
                     work_to_do = True
 
-                    display.debug("this host has work to do", host=host_name)
-
+                if not self._tqm._unreachable_hosts.get(host_name, False) and task:
                     # check to see if this host is blocked (still executing a previous task)
-                    if (host_name not in self._blocked_hosts or not self._blocked_hosts[host_name]):
-
+                    if not self._blocked_hosts.get(host_name, False):
                         display.debug("getting variables", host=host_name)
                         task_vars = self._variable_manager.get_vars(play=iterator._play, host=host, task=task,
                                                                     _hosts=self._hosts_cache,
@@ -154,9 +156,9 @@ class StrategyModule(StrategyBase):
                             if same_tasks >= throttle:
                                 break
 
-                        # pop the task, mark the host blocked, and queue it
+                        # advance the host, mark the host blocked, and queue it
                         self._blocked_hosts[host_name] = True
-                        (state, task) = iterator.get_next_task_for_host(host)
+                        iterator.set_state_for_host(host.name, state)
 
                         try:
                             action = action_loader.get(task.action, class_only=True, collection_list=task.collections)
@@ -255,6 +257,8 @@ class StrategyModule(StrategyBase):
                             )
                         else:
                             new_blocks = self._load_included_file(included_file, iterator=iterator)
+                    except AnsibleParserError:
+                        raise
                     except AnsibleError as e:
                         for host in included_file._hosts:
                             iterator.mark_host_failed(host)

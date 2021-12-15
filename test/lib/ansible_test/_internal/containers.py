@@ -286,7 +286,7 @@ class ContainerAccess:
 
     def to_dict(self):  # type: () -> t.Dict[str, t.Any]
         """Return a dict of the current instance."""
-        value = dict(
+        value: t.Dict[str, t.Any] = dict(
             host_ip=self.host_ip,
             names=self.names,
         )
@@ -829,7 +829,7 @@ def cleanup_ssh_ports(
         for process in ssh_processes:
             process.terminate()
 
-        display.info('Waiting for the %s host SSH port forwarding processs(es) to terminate.' % host_type, verbosity=1)
+        display.info('Waiting for the %s host SSH port forwarding process(es) to terminate.' % host_type, verbosity=1)
 
         for process in ssh_processes:
             process.wait()

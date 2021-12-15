@@ -34,20 +34,13 @@
                   "value of test1_choices must be one of: this paddle game, the astray, this remote control, the chair, got: My dog",
                   "value of some_choices must be one of: choice1, choice2, got: choice4",
                   "argument 'some_second_level' is of type <class 'ansible.parsing.yaml.objects.AnsibleUnicode'> found in 'some_dict_options'. and we were unable to convert to bool: The value 'not-a-bool' is not a valid boolean.  ",
-                  "argument 'third_level' is of type <class 'ansible.parsing.yaml.objects.AnsibleUnicode'> found in 'multi_level_option -> second_level'. and we were unable to convert to int: <class 'ansible.parsing.yaml.objects.AnsibleUnicode'> cannot be converted to an int"
+                  "argument 'third_level' is of type <class 'ansible.parsing.yaml.objects.AnsibleUnicode'> found in 'multi_level_option -> second_level'. and we were unable to convert to int: <class 'ansible.parsing.yaml.objects.AnsibleUnicode'> cannot be converted to an int",
+                  "argument 'some_more_dict_options' is of type <class 'ansible.parsing.yaml.objects.AnsibleUnicode'> and we were unable to convert to dict: dictionary requested, could not parse JSON or key=value",
+                  "value of 'some_more_dict_options' must be of type dict or list of dicts",
+                  "dictionary requested, could not parse JSON or key=value",
                   ]
 
   tasks:
-      # This test play requires jinja >= 2.7
-      - name: get the jinja2 version
-        shell: python -c 'import jinja2; print(jinja2.__version__)'
-        register: jinja2_version
-        delegate_to: localhost
-        changed_when: false
-
-      - debug:
-          msg: "Jinja version: {{ jinja2_version.stdout }}"
-
       - name: include_role test1 since it has a arg_spec.yml
         block:
             - include_role:
@@ -86,6 +79,7 @@
                 some_str_removed_in: "foo"
                 some_dict_options:
                   some_second_level: "not-a-bool"
+                some_more_dict_options: "not-a-dict"
                 multi_level_option:
                   second_level:
                     third_level: "should_be_int"
@@ -174,7 +168,3 @@
                   - ansible_failed_result.validate_args_context.name == "test1"
                   - ansible_failed_result.validate_args_context.type == "role"
                   - "ansible_failed_result.validate_args_context.path is search('roles_arg_spec/roles/test1')"
-
-        # skip this task if jinja isnt >= 2.7, aka centos6
-        when:
-            - jinja2_version.stdout is version('2.7', '>=')

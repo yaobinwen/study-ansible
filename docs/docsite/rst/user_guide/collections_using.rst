@@ -37,11 +37,6 @@ Installing an older version of a collection
 
 .. include:: ../shared_snippets/installing_older_collection.txt
 
-Installing a collection from a git repository
----------------------------------------------
-
-.. include:: ../shared_snippets/installing_collections_git_repo.txt
-
 .. _collection_requirements_file:
 
 Install multiple collections with a requirements file
@@ -56,6 +51,15 @@ Downloading a collection for offline use
 
 .. include:: ../shared_snippets/download_tarball_collections.txt
 
+Installing a collection from source files
+-----------------------------------------
+
+.. include:: ../shared_snippets/installing_collections_file.rst
+
+Installing a collection from a git repository
+---------------------------------------------
+
+.. include:: ../shared_snippets/installing_collections_git_repo.txt
 
 .. _galaxy_server_config:
 
@@ -370,6 +374,11 @@ A few recommendations when creating such playbooks, ``hosts:`` should be generic
 
 
 This will have an implied entry in the ``collections:`` keyword of ``my_namespace.my_collection`` just as with roles.
+
+.. note::
+    Playbook names, like other collection resources, have a restricted set of valid characters.
+    Names can contain only lowercase alphanumeric characters, plus _ and must start with an alpha character. The dash ``-`` character is not valid for playbook names in collections.
+    Playbooks whose names contain invalid characters are not addressable: this is a limitation of the Python importer that is used to load collection resources.
 
 .. seealso::
 

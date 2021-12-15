@@ -661,17 +661,13 @@ def _validate_argument_values(argument_spec, parameters, options_context=None, e
                 elif parameters[param] not in choices:
                     # PyYaml converts certain strings to bools. If we can unambiguously convert back, do so before checking
                     # the value. If we can't figure this out, module author is responsible.
-                    lowered_choices = None
                     if parameters[param] == 'False':
-                        lowered_choices = lenient_lowercase(choices)
                         overlap = BOOLEANS_FALSE.intersection(choices)
                         if len(overlap) == 1:
                             # Extract from a set
                             (parameters[param],) = overlap
 
                     if parameters[param] == 'True':
-                        if lowered_choices is None:
-                            lowered_choices = lenient_lowercase(choices)
                         overlap = BOOLEANS_TRUE.intersection(choices)
                         if len(overlap) == 1:
                             (parameters[param],) = overlap
@@ -724,22 +720,23 @@ def _validate_sub_spec(argument_spec, parameters, prefix='', options_context=Non
             options_context.append(param)
 
             # Make sure we can iterate over the elements
-            if isinstance(parameters[param], dict):
+            if not isinstance(parameters[param], Sequence) or isinstance(parameters[param], string_types):
                 elements = [parameters[param]]
             else:
                 elements = parameters[param]
 
             for idx, sub_parameters in enumerate(elements):
+                no_log_values.update(set_fallbacks(sub_spec, sub_parameters))
+
                 if not isinstance(sub_parameters, dict):
                     errors.append(SubParameterTypeError("value of '%s' must be of type dict or list of dicts" % param))
+                    continue
 
                 # Set prefix for warning messages
                 new_prefix = prefix + param
                 if wanted == 'list':
                     new_prefix += '[%d]' % idx
                 new_prefix += '.'
-
-                no_log_values.update(set_fallbacks(sub_spec, sub_parameters))
 
                 alias_warnings = []
                 alias_deprecations = []

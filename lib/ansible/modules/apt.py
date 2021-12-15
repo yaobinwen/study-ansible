@@ -101,6 +101,12 @@ options:
     type: bool
     default: 'no'
     version_added: "2.12"
+  allow_change_held_packages:
+    description:
+      - Allows changing the version of a package which is on the apt hold list
+    type: bool
+    default: 'no'
+    version_added: '2.13'
   upgrade:
     description:
       - If yes or safe, performs an aptitude safe-upgrade.
@@ -170,7 +176,7 @@ options:
     version_added: "2.4"
   lock_timeout:
     description:
-      - How many seconds will this action wait to aquire a lock on the apt db.
+      - How many seconds will this action wait to acquire a lock on the apt db.
       - Sometimes there is a transitory lock and this will retry at least until timeout is hit.
     type: int
     default: 60
@@ -196,7 +202,7 @@ notes:
    - The apt-get commandline supports implicit regex matches here but we do not because it can let typos through easier
      (If you typo C(foo) as C(fo) apt-get would install packages that have "fo" in their name with a warning and a prompt for the user.
      Since we don't have warnings and prompts before installing we disallow this.Use an explicit fnmatch pattern if you want wildcarding)
-   - When used with a `loop:` each package will be processed individually, it is much more efficient to pass the list directly to the `name` option.
+   - When used with a C(loop:) each package will be processed individually, it is much more efficient to pass the list directly to the I(name) option.
 '''
 
 EXAMPLES = '''
@@ -298,18 +304,6 @@ EXAMPLES = '''
 - name: Remove dependencies that are no longer required
   apt:
     autoremove: yes
-
-# Sometimes apt tasks fail because apt is locked by an autoupdate or by a race condition on a thread.
-# To check for a lock file before executing, and keep trying until the lock file is released:
-- name: Install packages only when the apt process is not locked
-  apt:
-    name: foo
-    state: present
-  register: apt_action
-  retries: 100
-  until: apt_action is success or ('Failed to lock apt for exclusive operation' not in apt_action.msg and '/var/lib/dpkg/lock' not in apt_action.msg)
-
-
 '''
 
 RETURN = '''
@@ -353,7 +347,7 @@ import time
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.common.locale import get_best_parsable_locale
 from ansible.module_utils.common.respawn import has_respawned, probe_interpreters_for_module, respawn_module
-from ansible.module_utils._text import to_bytes, to_native
+from ansible.module_utils._text import to_native
 from ansible.module_utils.six import PY3
 from ansible.module_utils.urls import fetch_file
 
@@ -667,7 +661,7 @@ def install(m, pkgspec, cache, upgrade=False, default_release=None,
             install_recommends=None, force=False,
             dpkg_options=expand_dpkg_options(DPKG_OPTIONS),
             build_dep=False, fixed=False, autoremove=False, fail_on_autoremove=False, only_upgrade=False,
-            allow_unauthenticated=False, allow_downgrade=False):
+            allow_unauthenticated=False, allow_downgrade=False, allow_change_held_packages=False):
     pkg_list = []
     packages = ""
     pkgspec = expand_pkgspec_from_fnmatches(m, pkgspec, cache)
@@ -745,6 +739,9 @@ def install(m, pkgspec, cache, upgrade=False, default_release=None,
         if allow_downgrade:
             cmd += " --allow-downgrades"
 
+        if allow_change_held_packages:
+            cmd += " --allow-change-held-packages"
+
         with PolicyRcD(m):
             rc, out, err = m.run_command(cmd)
 
@@ -781,16 +778,22 @@ def get_field_of_deb(m, deb_file, field="Version"):
     return to_native(stdout).strip('\n')
 
 
-def install_deb(m, debs, cache, force, fail_on_autoremove, install_recommends, allow_unauthenticated, allow_downgrade, dpkg_options):
+def install_deb(
+        m, debs, cache, force, fail_on_autoremove, install_recommends,
+        allow_unauthenticated,
+        allow_downgrade,
+        allow_change_held_packages,
+        dpkg_options,
+):
     changed = False
     deps_to_install = []
     pkgs_to_install = []
     for deb_file in debs.split(','):
         try:
-            pkg = apt.debfile.DebPackage(deb_file)
+            pkg = apt.debfile.DebPackage(deb_file, cache=apt.Cache())
             pkg_name = get_field_of_deb(m, deb_file, "Package")
             pkg_version = get_field_of_deb(m, deb_file, "Version")
-            if len(apt_pkg.get_architectures()) > 1:
+            if hasattr(apt_pkg, 'get_architectures') and len(apt_pkg.get_architectures()) > 1:
                 pkg_arch = get_field_of_deb(m, deb_file, "Architecture")
                 pkg_key = "%s:%s" % (pkg_name, pkg_arch)
             else:
@@ -829,6 +832,7 @@ def install_deb(m, debs, cache, force, fail_on_autoremove, install_recommends, a
                                      fail_on_autoremove=fail_on_autoremove,
                                      allow_unauthenticated=allow_unauthenticated,
                                      allow_downgrade=allow_downgrade,
+                                     allow_change_held_packages=allow_change_held_packages,
                                      dpkg_options=expand_dpkg_options(dpkg_options))
         if not success:
             m.fail_json(**retvals)
@@ -1118,6 +1122,7 @@ def main():
             force_apt_get=dict(type='bool', default=False),
             allow_unauthenticated=dict(type='bool', default=False, aliases=['allow-unauthenticated']),
             allow_downgrade=dict(type='bool', default=False, aliases=['allow-downgrade', 'allow_downgrades', 'allow-downgrades']),
+            allow_change_held_packages=dict(type='bool', default=False),
             lock_timeout=dict(type='int', default=60),
         ),
         mutually_exclusive=[['deb', 'package', 'upgrade']],
@@ -1215,6 +1220,7 @@ def main():
     install_recommends = p['install_recommends']
     allow_unauthenticated = p['allow_unauthenticated']
     allow_downgrade = p['allow_downgrade']
+    allow_change_held_packages = p['allow_change_held_packages']
     dpkg_options = expand_dpkg_options(p['dpkg_options'])
     autoremove = p['autoremove']
     fail_on_autoremove = p['fail_on_autoremove']
@@ -1306,6 +1312,7 @@ def main():
                 install_deb(module, p['deb'], cache,
                             install_recommends=install_recommends,
                             allow_unauthenticated=allow_unauthenticated,
+                            allow_change_held_packages=allow_change_held_packages,
                             allow_downgrade=allow_downgrade,
                             force=force_yes, fail_on_autoremove=fail_on_autoremove, dpkg_options=p['dpkg_options'])
 
@@ -1369,7 +1376,8 @@ def main():
                     fail_on_autoremove=fail_on_autoremove,
                     only_upgrade=p['only_upgrade'],
                     allow_unauthenticated=allow_unauthenticated,
-                    allow_downgrade=allow_downgrade
+                    allow_downgrade=allow_downgrade,
+                    allow_change_held_packages=allow_change_held_packages,
                 )
 
                 # Store if the cache has been updated

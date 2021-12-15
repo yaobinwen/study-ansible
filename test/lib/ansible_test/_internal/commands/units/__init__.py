@@ -227,7 +227,7 @@ def command_units(args):  # type: (UnitsConfig) -> None
         controller = any(test_context == TestContext.controller for test_context, python, paths, env in final_candidates)
 
         if args.requirements_mode != 'skip':
-            install_requirements(args, target_profile.python, ansible=controller, command=True)  # units
+            install_requirements(args, target_profile.python, ansible=controller, command=True, controller=False)  # units
 
         test_sets.extend(final_candidates)
 
@@ -318,7 +318,6 @@ def get_units_ansible_python_path(args, test_context):  # type: (UnitsConfig, st
         # legacy collection loader required by all python versions not supported by the controller
         write_text_file(os.path.join(ansible_test_path, '__init__.py'), '', True)
         write_text_file(os.path.join(ansible_test_path, '_internal', '__init__.py'), '', True)
-        os.symlink(os.path.join(ANSIBLE_TEST_TARGET_ROOT, 'legacy_collection_loader'), os.path.join(ansible_test_path, '_internal', 'legacy_collection_loader'))
     elif test_context == TestContext.modules:
         # only non-collection ansible module tests should have access to ansible built-in modules
         os.symlink(os.path.join(ANSIBLE_LIB_ROOT, 'modules'), os.path.join(ansible_path, 'modules'))

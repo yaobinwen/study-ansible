@@ -59,7 +59,7 @@ DOCUMENTATION = '''
       sshpass_prompt:
           description:
               - Password prompt that sshpass should search for. Supported by sshpass 1.06 and up.
-              - Defaults to ``Enter PIN for`` when pkcs11_provider is set.
+              - Defaults to C(Enter PIN for) when pkcs11_provider is set.
           default: ''
           ini:
               - section: 'ssh_connection'
@@ -131,7 +131,7 @@ DOCUMENTATION = '''
               - name: ansible_scp_executable
                 version_added: '2.7'
       scp_extra_args:
-          description: Extra exclusive to the ``scp`` CLI
+          description: Extra exclusive to the C(scp) CLI
           vars:
               - name: ansible_scp_extra_args
           env:
@@ -145,7 +145,7 @@ DOCUMENTATION = '''
             - name: scp_extra_args
           default: ''
       sftp_extra_args:
-          description: Extra exclusive to the ``sftp`` CLI
+          description: Extra exclusive to the C(sftp) CLI
           vars:
               - name: ansible_sftp_extra_args
           env:
@@ -242,9 +242,9 @@ DOCUMENTATION = '''
       control_path:
         description:
           - This is the location to save SSH's ControlPath sockets, it uses SSH's variable substitution.
-          - Since 2.3, if null (default), ansible will generate a unique hash. Use `%(directory)s` to indicate where to use the control dir path setting.
-          - Before 2.3 it defaulted to `control_path=%(directory)s/ansible-ssh-%%h-%%p-%%r`.
-          - Be aware that this setting is ignored if `-o ControlPath` is set in ssh args.
+          - Since 2.3, if null (default), ansible will generate a unique hash. Use ``%(directory)s`` to indicate where to use the control dir path setting.
+          - Before 2.3 it defaulted to ``control_path=%(directory)s/ansible-ssh-%%h-%%p-%%r``.
+          - Be aware that this setting is ignored if C(-o ControlPath) is set in ssh args.
         env:
           - name: ANSIBLE_SSH_CONTROL_PATH
         ini:
@@ -257,7 +257,7 @@ DOCUMENTATION = '''
         default: ~/.ansible/cp
         description:
           - This sets the directory to use for ssh control path if the control path setting is null.
-          - Also, provides the `%(directory)s` variable for the control path setting.
+          - Also, provides the ``%(directory)s`` variable for the control path setting.
         env:
           - name: ANSIBLE_SSH_CONTROL_PATH_DIR
         ini:
@@ -280,7 +280,7 @@ DOCUMENTATION = '''
         description:
             - "Preferred method to use when transferring files over ssh"
             - Setting to 'smart' (default) will try them in order, until one succeeds or they all fail
-            - Using 'piped' creates an ssh pipe with ``dd`` on either side to copy the data
+            - Using 'piped' creates an ssh pipe with C(dd) on either side to copy the data
         choices: ['sftp', 'scp', 'piped', 'smart']
         env: [{name: ANSIBLE_SSH_TRANSFER_METHOD}]
         ini:
@@ -289,6 +289,10 @@ DOCUMENTATION = '''
             - name: ansible_ssh_transfer_method
               version_added: '2.12'
       scp_if_ssh:
+        deprecated:
+              why: In favor of the "ssh_transfer_method" option.
+              version: "2.17"
+              alternatives: ssh_transfer_method
         default: smart
         description:
           - "Preferred method to use when transfering files over SSH."
@@ -352,6 +356,7 @@ import hashlib
 import os
 import pty
 import re
+import shlex
 import subprocess
 import time
 
@@ -366,7 +371,6 @@ from ansible.errors import (
 from ansible.errors import AnsibleOptionsError
 from ansible.module_utils.compat import selectors
 from ansible.module_utils.six import PY3, text_type, binary_type
-from ansible.module_utils.six.moves import shlex_quote
 from ansible.module_utils._text import to_bytes, to_native, to_text
 from ansible.module_utils.parsing.convert_bool import BOOLEANS, boolean
 from ansible.plugins.connection import ConnectionBase, BUFSIZE
@@ -868,7 +872,7 @@ class Connection(ConnectionBase):
         '''
 
         # We don't use _shell.quote as this is run on the controller and independent from the shell plugin chosen
-        display_cmd = u' '.join(shlex_quote(to_text(c)) for c in cmd)
+        display_cmd = u' '.join(shlex.quote(to_text(c)) for c in cmd)
         display.vvv(u'SSH: EXEC {0}'.format(display_cmd), host=self.host)
 
         # Start the given command. If we don't need to pipeline data, we can try
@@ -1208,7 +1212,7 @@ class Connection(ConnectionBase):
             returncode = stdout = stderr = None
             if method == 'sftp':
                 cmd = self._build_command(self.get_option('sftp_executable'), 'sftp', to_bytes(host))
-                in_data = u"{0} {1} {2}\n".format(sftp_action, shlex_quote(in_path), shlex_quote(out_path))
+                in_data = u"{0} {1} {2}\n".format(sftp_action, shlex.quote(in_path), shlex.quote(out_path))
                 in_data = to_bytes(in_data, nonstring='passthru')
                 (returncode, stdout, stderr) = self._bare_run(cmd, in_data, checkrc=False)
             elif method == 'scp':

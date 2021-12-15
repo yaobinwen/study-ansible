@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import sys
+import typing as t
 
 # This import should occur as early as possible.
 # It must occur before subprocess has been imported anywhere in the current process.
@@ -47,11 +48,11 @@ from .provisioning import (
 )
 
 
-def main():
+def main(cli_args=None):  # type: (t.Optional[t.List[str]]) -> None
     """Main program function."""
     try:
         os.chdir(data_context().content.root)
-        args = parse_args()
+        args = parse_args(cli_args)
         config = args.config(args)  # type: CommonConfig
         display.verbosity = config.verbosity
         display.truncate = config.truncate

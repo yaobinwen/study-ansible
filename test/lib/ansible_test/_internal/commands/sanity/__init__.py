@@ -242,7 +242,7 @@ def command_sanity(args):  # type: (SanityConfig) -> None
                     elif isinstance(test, SanitySingleVersion):
                         # single version sanity tests use the controller python
                         test_profile = host_state.controller_profile
-                        virtualenv_python = create_sanity_virtualenv(args, test_profile.python, test.name, context=test.name)
+                        virtualenv_python = create_sanity_virtualenv(args, test_profile.python, test.name)
 
                         if virtualenv_python:
                             virtualenv_yaml = check_sanity_virtualenv_yaml(virtualenv_python)
@@ -785,7 +785,9 @@ class SanityTest(metaclass=abc.ABCMeta):
                 # utility code that runs in target environments and requires support for remote-only Python versions
                 is_subdir(target.path, 'test/lib/ansible_test/_util/target/') or
                 # integration test support modules/module_utils continue to require support for remote-only Python versions
-                re.search('^test/support/integration/.*/(modules|module_utils)/', target.path)
+                re.search('^test/support/integration/.*/(modules|module_utils)/', target.path) or
+                # collection loader requires support for remote-only Python versions
+                re.search('^lib/ansible/utils/collection_loader/', target.path)
             ))
         )]
 
@@ -1077,10 +1079,8 @@ def create_sanity_virtualenv(
         args,  # type: SanityConfig
         python,  # type: PythonConfig
         name,  # type: str
-        ansible=False,  # type: bool
         coverage=False,  # type: bool
         minimize=False,  # type: bool
-        context=None,  # type: t.Optional[str]
 ):  # type: (...) -> t.Optional[VirtualPythonConfig]
     """Return an existing sanity virtual environment matching the requested parameters or create a new one."""
     commands = collect_requirements(  # create_sanity_virtualenv()
@@ -1088,13 +1088,11 @@ def create_sanity_virtualenv(
         controller=True,
         virtualenv=False,
         command=None,
-        # used by import tests
-        ansible=ansible,
-        cryptography=ansible,
+        ansible=False,
+        cryptography=False,
         coverage=coverage,
         minimize=minimize,
-        # used by non-import tests
-        sanity=context,
+        sanity=name,
     )
 
     if commands:

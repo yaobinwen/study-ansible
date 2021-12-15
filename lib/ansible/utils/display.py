@@ -36,18 +36,12 @@ from termios import TIOCGWINSZ
 
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleAssertionError
-from ansible.module_utils._text import to_bytes, to_text, to_native
-from ansible.module_utils.six import with_metaclass, text_type
+from ansible.module_utils._text import to_bytes, to_text
+from ansible.module_utils.six import text_type
 from ansible.utils.color import stringc
 from ansible.utils.singleton import Singleton
 from ansible.utils.unsafe_proxy import wrap_var
 
-try:
-    # Python 2
-    input = raw_input
-except NameError:
-    # Python 3, we already have raw_input
-    pass
 
 _LIBC = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
 # Set argtypes, to avoid segfault if the wrong type is provided,
@@ -204,7 +198,7 @@ b_COW_PATHS = (
 )
 
 
-class Display(with_metaclass(Singleton, object)):
+class Display(metaclass=Singleton):
 
     def __init__(self, verbosity=0):
 
@@ -225,7 +219,9 @@ class Display(with_metaclass(Singleton, object)):
             try:
                 cmd = subprocess.Popen([self.b_cowsay, "-l"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 (out, err) = cmd.communicate()
-                self.cows_available = {to_text(c) for c in out.split()}
+                if cmd.returncode:
+                    raise Exception
+                self.cows_available = {to_text(c) for c in out.split()}  # set comprehension
                 if C.ANSIBLE_COW_ACCEPTLIST and any(C.ANSIBLE_COW_ACCEPTLIST):
                     self.cows_available = set(C.ANSIBLE_COW_ACCEPTLIST).intersection(self.cows_available)
             except Exception:

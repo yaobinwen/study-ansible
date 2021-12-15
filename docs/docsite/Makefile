@@ -45,7 +45,7 @@ endif
 
 DOC_PLUGINS ?= become cache callback cliconf connection httpapi inventory lookup netconf shell strategy vars
 
-PYTHON=python
+PYTHON ?= python
 # fetch version from project release.py as single source-of-truth
 VERSION := $(shell $(PYTHON) ../../packaging/release/versionhelper/version_helper.py --raw || echo error)
 ifeq ($(findstring error,$(VERSION)), error)
@@ -175,7 +175,7 @@ clean:
 			rm -rf "rst/collections/$$filename"; \
 		fi \
 	done
-	@echo "Cleanning up generated ansible_structure"
+	@echo "Cleaning up generated ansible_structure"
 	find . -type l -delete
 	@echo "Cleaning up legacy generated rst locations"
 	rm -rf rst/modules

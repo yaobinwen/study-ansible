@@ -98,9 +98,7 @@ exclude_patterns = [
     'network',
     'scenario_guides',
     'porting_guides/porting_guides.rst',
-    'porting_guides/porting_guide_2*',
-    'porting_guides/porting_guide_3.rst',
-    'porting_guides/porting_guide_4.rst',
+    'porting_guides/porting_guide_[1-9]*',
     'roadmap/index.rst',
     'roadmap/ansible_roadmap_index.rst',
     'roadmap/old_roadmap_index.rst',
@@ -173,9 +171,9 @@ html_context = {
     'github_root_dir': 'devel/lib/ansible',
     'github_cli_version': 'devel/lib/ansible/cli/',
     'current_version': version,
-    'latest_version': '2.11',
+    'latest_version': '2.12',
     # list specifically out of order to make latest work
-    'available_versions': ('2.11', '2.10', 'devel',),
+    'available_versions': ('2.12', '2.11', '2.10', 'devel',),
 }
 
 # Add extra CSS styles to the resulting HTML pages
@@ -308,6 +306,7 @@ autoclass_content = 'both'
 intersphinx_mapping = {'python': ('https://docs.python.org/2/', (None, '../python2.inv')),
                        'python3': ('https://docs.python.org/3/', (None, '../python3.inv')),
                        'jinja2': ('http://jinja.palletsprojects.com/', (None, '../jinja2.inv')),
+                       'ansible_5': ('https://docs.ansible.com/ansible/5/', (None, '../ansible_5.inv')),
                        'ansible_4': ('https://docs.ansible.com/ansible/4/', (None, '../ansible_4.inv')),
                        'ansible_3': ('https://docs.ansible.com/ansible/3/', (None, '../ansible_3.inv')),
                        'ansible_2_10': ('https://docs.ansible.com/ansible/2.10/', (None, '../ansible_2_10.inv')),

@@ -377,7 +377,7 @@ Here's a simple lookup plugin implementation --- this lookup returns the content
               key: option1
       notes:
         - if read in variable context, the file can be interpreted as YAML if the content is valid to the parser.
-        - this lookup does not understand globing --- use the fileglob lookup instead.
+        - this lookup does not understand globbing --- use the fileglob lookup instead.
     """
     from ansible.errors import AnsibleError, AnsibleParserError
     from ansible.plugins.lookup import LookupBase
@@ -473,7 +473,7 @@ Vars plugins
 
 Vars plugins inject additional variable data into Ansible runs that did not come from an inventory source, playbook, or command line. Playbook constructs like 'host_vars' and 'group_vars' work using vars plugins.
 
-Vars plugins were partially implemented in Ansible 2.0 and rewritten to be fully implemented starting with Ansible 2.4. Vars plugins are unsupported by collections.
+Vars plugins were partially implemented in Ansible 2.0 and rewritten to be fully implemented starting with Ansible 2.4. Vars plugins are supported by collections starting with Ansible 2.10.
 
 Older plugins used a ``run`` method as their main body/work:
 

@@ -71,8 +71,8 @@ options:
     version_added: "2.1"
   include:
     description:
-      - List of directory and file entries that you would like to extract from the archive. Only
-        files listed here will be extracted.
+      - List of directory and file entries that you would like to extract from the archive. If C(include)
+        is not empty, only files listed here will be extracted.
       - Mutually exclusive with C(exclude).
     type: list
     default: []
@@ -386,7 +386,7 @@ class ZipArchive(object):
                         exclude_flag = False
                         if self.excludes:
                             for exclude in self.excludes:
-                                if not fnmatch.fnmatch(member, exclude):
+                                if fnmatch.fnmatch(member, exclude):
                                     exclude_flag = True
                                     break
                         if not exclude_flag:
@@ -786,7 +786,7 @@ class TgzArchive(object):
             cmd.extend(self.include_files)
 
         locale = get_best_parsable_locale(self.module)
-        rc, out, err = self.module.run_command(cmd, cwd=self.b_dest, environ_update=dict(LANG=locale, LC_ALL=locale, LC_MESSAGES=locale))
+        rc, out, err = self.module.run_command(cmd, cwd=self.b_dest, environ_update=dict(LANG=locale, LC_ALL=locale, LC_MESSAGES=locale, LANGUAGE=locale))
         if rc != 0:
             raise UnarchiveError('Unable to list files in the archive')
 
@@ -831,7 +831,7 @@ class TgzArchive(object):
         if self.include_files:
             cmd.extend(self.include_files)
         locale = get_best_parsable_locale(self.module)
-        rc, out, err = self.module.run_command(cmd, cwd=self.b_dest, environ_update=dict(LANG=locale, LC_ALL=locale, LC_MESSAGES=locale))
+        rc, out, err = self.module.run_command(cmd, cwd=self.b_dest, environ_update=dict(LANG=locale, LC_ALL=locale, LC_MESSAGES=locale, LANGUAGE=locale))
 
         # Check whether the differences are in something that we're
         # setting anyway
@@ -885,7 +885,7 @@ class TgzArchive(object):
         if self.include_files:
             cmd.extend(self.include_files)
         locale = get_best_parsable_locale(self.module)
-        rc, out, err = self.module.run_command(cmd, cwd=self.b_dest, environ_update=dict(LANG=locale, LC_ALL=locale, LC_MESSAGES=locale))
+        rc, out, err = self.module.run_command(cmd, cwd=self.b_dest, environ_update=dict(LANG=locale, LC_ALL=locale, LC_MESSAGES=locale, LANGUAGE=locale))
         return dict(cmd=cmd, rc=rc, out=out, err=err)
 
     def can_handle_archive(self):

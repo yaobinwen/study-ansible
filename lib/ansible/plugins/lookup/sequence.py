@@ -15,8 +15,8 @@ DOCUMENTATION = """
       - 'Arguments can be specified as key=value pair strings or as a shortcut form of the arguments string is also accepted: [start-]end[/stride][:format].'
       - 'Numerical values can be specified in decimal, hexadecimal (0x3f8) or octal (0600).'
       - Starting at version 1.9.2, negative strides are allowed.
-      - Generated items are strings. Use Jinja2 filters to convert items to preferred type, e.g. ``{{ 1 + item|int }}``.
-      - See also Jinja2 ``range`` filter as an alternative.
+      - Generated items are strings. Use Jinja2 filters to convert items to preferred type, e.g. C({{ 1 + item|int }}).
+      - See also Jinja2 C(range) filter as an alternative.
     options:
       start:
         description: number at which to start the sequence
@@ -81,7 +81,6 @@ RETURN = """
 from re import compile as re_compile, IGNORECASE
 
 from ansible.errors import AnsibleError
-from ansible.module_utils.six.moves import xrange
 from ansible.parsing.splitter import parse_kv
 from ansible.plugins.lookup import LookupBase
 
@@ -231,7 +230,7 @@ class LookupModule(LookupBase):
             adjust = 1
         else:
             adjust = -1
-        numbers = xrange(self.start, self.end + adjust, self.stride)
+        numbers = range(self.start, self.end + adjust, self.stride)
 
         for i in numbers:
             try:

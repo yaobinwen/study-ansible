@@ -50,9 +50,9 @@ options:
     version_added: "2.0"
   list:
     description:
-      - "Package name to run the equivalent of yum list --show-duplicates <package> against. In addition to listing packages,
+      - "Package name to run the equivalent of yum list C(--show-duplicates <package>) against. In addition to listing packages,
         use can also list the following: C(installed), C(updates), C(available) and C(repos)."
-      - This parameter is mutually exclusive with C(name).
+      - This parameter is mutually exclusive with I(name).
     type: str
   state:
     description:
@@ -98,7 +98,8 @@ options:
     version_added: "1.2"
   skip_broken:
     description:
-      - Skip packages with broken dependencies(devsolve) and are causing problems.
+      - Skip all unavailable packages or packages with broken dependencies
+        without raising an error. Equivalent to passing the --skip-broken option.
     type: bool
     default: "no"
     version_added: "2.3"
@@ -118,7 +119,13 @@ options:
     type: bool
     default: "yes"
     version_added: "2.1"
-
+  sslverify:
+    description:
+      - Disables SSL validation of the repository server for this transaction.
+      - This should be set to C(no) if one of the configured repositories is using an untrusted or self-signed certificate.
+    type: bool
+    default: "yes"
+    version_added: "2.13"
   update_only:
     description:
       - When using latest, only update installed packages. Do not install packages.
@@ -247,7 +254,7 @@ extends_documentation_fragment:
 - action_common_attributes.flow
 attributes:
     action:
-        details: In the case of yum, it has 2 action plugins that use it under the hood, M(yum) and M(package).
+        details: In the case of yum, it has 2 action plugins that use it under the hood, M(ansible.builtin.yum) and M(ansible.builtin.package).
         support: partial
     async:
         support: none
@@ -260,8 +267,8 @@ attributes:
     platform:
         platforms: rhel
 notes:
-  - When used with a `loop:` each package will be processed individually,
-    it is much more efficient to pass the list directly to the `name` option.
+  - When used with a C(loop:) each package will be processed individually,
+    it is much more efficient to pass the list directly to the I(name) option.
   - In versions prior to 1.9.2 this module installed and removed each package
     given to the yum module separately. This caused problems when packages
     specified by filename or url had to be installed or removed together. In
@@ -550,6 +557,11 @@ class YumModule(YumDnf):
             if self.disable_excludes:
                 self._yum_base.conf.disable_excludes = self.disable_excludes
 
+            # setting conf.sslverify allows retrieving the repo's metadata
+            # without validating the certificate, but that does not allow
+            # package installation from a bad-ssl repo.
+            self._yum_base.conf.sslverify = self.sslverify
+
             # A sideeffect of accessing conf is that the configuration is
             # loaded and plugins are discovered
             self.yum_base.conf
@@ -736,13 +748,13 @@ class YumModule(YumDnf):
                     # If a repo with `repo_gpgcheck=1` is added and the repo GPG
                     # key was never accepted, querying this repo will throw an
                     # error: 'repomd.xml signature could not be verified'. In that
-                    # situation we need to run `yum -y makecache` which will accept
+                    # situation we need to run `yum -y makecache fast` which will accept
                     # the key and try again.
                     if 'repomd.xml signature could not be verified' in to_native(e):
                         if self.releasever:
-                            self.module.run_command(self.yum_basecmd + ['makecache'] + ['--releasever=%s' % self.releasever])
+                            self.module.run_command(self.yum_basecmd + ['makecache', 'fast', '--releasever=%s' % self.releasever])
                         else:
-                            self.module.run_command(self.yum_basecmd + ['makecache'])
+                            self.module.run_command(self.yum_basecmd + ['makecache', 'fast'])
                         pkgs = self.yum_base.returnPackagesByDep(req_spec) + \
                             self.yum_base.returnInstalledPackagesByDep(req_spec)
                     else:
@@ -954,6 +966,11 @@ class YumModule(YumDnf):
         cmd = self.yum_basecmd + [action] + pkgs
         if self.releasever:
             cmd.extend(['--releasever=%s' % self.releasever])
+
+        # setting sslverify using --setopt is required as conf.sslverify only
+        # affects the metadata retrieval.
+        if not self.sslverify:
+            cmd.extend(['--setopt', 'sslverify=0'])
 
         if self.module.check_mode:
             self.module.exit_json(changed=True, results=res['results'], changes=dict(installed=pkgs))
