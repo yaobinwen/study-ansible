@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2013, Hiroaki Nakamura <hnakamur@gmail.com>
@@ -944,6 +943,12 @@ class RedosHostname(Hostname):
     platform = 'Linux'
     distribution = 'Redos'
     strategy_class = SystemdStrategy
+
+
+class EurolinuxHostname(Hostname):
+    platform = 'Linux'
+    distribution = 'Eurolinux'
+    strategy_class = RedHatStrategy
 
 
 def main():
