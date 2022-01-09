@@ -12,11 +12,17 @@ I created a branch `ywen/v2.9.12` to study the code of the version `2.9.12`. As 
 
 The latest version (i.e., the `devel` version) of the developer guide is here: [Developer Guide](https://docs.ansible.com/ansible/devel/dev_guide/index.html). Note that Ansible may re-organize their documentation site so the links may become inaccessible. Should this happen, search the key word "Ansible Developer Guide".
 
+This section uses the following references:
+- [2.1] [Developing Ansible modules](https://docs.ansible.com/ansible/devel/dev_guide/developing_modules_general.html)
+  - [2.1.1] [Preparing an environment for developing Ansible modules](https://docs.ansible.com/ansible/devel/dev_guide/developing_modules_general.html#preparing-an-environment-for-developing-ansible-modules)
+  - [2.1.2] [Creating an info or a facts module](https://docs.ansible.com/ansible/devel/dev_guide/developing_modules_general.html#creating-an-info-or-a-facts-module)
+  - [2.1.3] [Creating a module](https://docs.ansible.com/ansible/devel/dev_guide/developing_modules_general.html#creating-a-module)
+
 ### 2.1 Prepare Development Environment to Develop a Module
 
-The development environment preparation is part of a larger scenario: [Developing Ansible modules](https://docs.ansible.com/ansible/devel/dev_guide/developing_modules_general.html)
+The development environment preparation is part of a larger scenario: Developing Ansible modules [2.1].
 
-To prepare the development environment: [Preparing an environment for developing Ansible modules](https://docs.ansible.com/ansible/devel/dev_guide/developing_modules_general.html#preparing-an-environment-for-developing-ansible-modules). The main steps are as follows (assuming Ubuntu):
+To prepare the development environment, refer to [2.1.1]. The main steps are as follows (assuming Ubuntu):
 
 - 1). Install prerequisites:
   - The Debian packages:
@@ -39,11 +45,56 @@ To prepare the development environment: [Preparing an environment for developing
 
 After the initial setup above, every time you are ready to start developing Ansible you should be able to just run the following from the root of the Ansible repo: `$ . venv/bin/activate && . hacking/env-setup`.
 
-### 2.2 Display Messages
+### 2.2 Decide Module Type
+
+The document [2.1] mentions three types of modules:
+
+| Type | Filename | Description | Template |
+|:----:|:--------:|:------------|:--------:|
+| info | `*_info.py` | Gathers information on other objects or files. | [2.1.2] |
+| facts | `*_facts.py` | Gather information about the target machines. | [2.1.2] |
+| general-purpose | `*.py` | For other purposes other than information or facts gathering. | [2.1.3] |
+
+### 2.3 Testing the Module
+
+[2.1] also talks about how to test the newly created module, such as sanity test and unit test.
+
+As a note says:
+
+> Ansible uses `pytest` for unit testing.
+
+Usually, one cannot test the `run_module()` function directly because it requires two things:
+- `stdin` as `AnsibleModule` reads its input arguments from the standard input.
+- `exit_json()` and `fail_json()` call `sys.exit()` which will cause the test program to exit.
+
+Therefore, usually one can only test the functions that the Ansible module calls. But the [`patch_ansible_module()` function](https://github.com/yaobinwen/ansible/blob/devel/test/units/modules/conftest.py#L16-L31) makes it possible to test the Ansible module directly:
+
+```python
+@pytest.fixture
+def patch_ansible_module(request, mocker):
+    if isinstance(request.param, string_types):
+        args = request.param
+    elif isinstance(request.param, MutableMapping):
+        if 'ANSIBLE_MODULE_ARGS' not in request.param:
+            request.param = {'ANSIBLE_MODULE_ARGS': request.param}
+        if '_ansible_remote_tmp' not in request.param['ANSIBLE_MODULE_ARGS']:
+            request.param['ANSIBLE_MODULE_ARGS']['_ansible_remote_tmp'] = '/tmp'
+        if '_ansible_keep_remote_files' not in request.param['ANSIBLE_MODULE_ARGS']:
+            request.param['ANSIBLE_MODULE_ARGS']['_ansible_keep_remote_files'] = False
+        args = json.dumps(request.param)
+    else:
+        raise Exception('Malformed data to the patch_ansible_module pytest fixture')
+
+    mocker.patch('ansible.module_utils.basic._ANSIBLE_ARGS', to_bytes(args))
+```
+
+Currently (as of 2022-01-09), the only tests that use `patch_ansible_module()` is [`test_pip.py`](https://github.com/yaobinwen/ansible/blob/devel/test/units/modules/test_pip.py).
+
+### 2.4 Display Messages
 
 Use the module `lib/ansible/utils/display.py`. Search the code `from ansible.utils.display import Display` or something similar to find the examples in the codebase.
 
-### 2.3 Debug Output vs `debug` Module Output
+### 2.5 Debug Output vs `debug` Module Output
 
 The "debug output" can refer to two things in Ansible, so be specific when talking about "debug output".
 
