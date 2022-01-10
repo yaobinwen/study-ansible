@@ -160,6 +160,7 @@ def load_options_vars(version):
     for attr, alias in attrs.items():
         opt = context.CLIARGS.get(attr)
         if opt is not None:
+            # NOTE(ywen): Add the `ansible_` prefix.
             options_vars['ansible_%s' % alias] = opt
 
     return options_vars
